@@ -29,15 +29,15 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .service(
                 web::resource("/register_event")
-                    .route(web::post().to(handle_event_registration)),
+                    .route(web::post().to(handle_event_registration))
             )
             .service(
                 web::resource("/health_check")
-                    .route(web::get().to(perform_health_check)),
+                    .route(web::get().to(perform_health_check))
             )
     })
     .bind(&server_address)?
-    .workers(4)
+    .workers(4) // Fine-tuning the number of workers may help with performance depending on your deployment environment.
     .run()
     .await
 }
