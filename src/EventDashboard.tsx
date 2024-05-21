@@ -5,17 +5,17 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-const localizer = momentLocalizer(moment);
+const calendarLocalizer = momentLocalizer(moment);
 
-interface Event {
+interface IEvent {
   id: number;
   title: string;
   start: Date;
   end: Date;
-  sessions?: Session[];
+  sessions?: ISession[];
 }
 
-interface Session {
+interface ISession {
   id: number;
   eventId: number;
   speaker: string;
@@ -24,41 +24,41 @@ interface Session {
   endTime: Date;
 }
 
-interface Attendee {
+interface IAttendee {
   id: number;
   name: string;
   email: string;
   sessionId: number;
 }
 
-const EventDashboard: React.FC = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
+const EventCalendarDashboard: React.FC = () => {
+  const [allEvents, setAllEvents] = useState<IEvent[]>([]);
+  const [allSessions, setAllSessions] = useState<ISession[]>([]);
+  const [allAttendees, setAllAttendees] = useState<IAttendee[]>([]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/events`)
       .then((res) => res.json())
-      .then(setEvents);
+      .then(setAllEvents);
   }, []);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/sessions`)
       .then((res) => res.json())
-      .then(setSessions);
+      .then(setAllSessions);
   }, []);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/attendees`)
       .then((res) => res.json())
-      .then(setAttendees);
+      .then(setAllAttendees);
   }, []);
 
-  const handleSelectEvent = (event: Event) => {
-    console.log(`Selected event: ${event.title}`);
+  const handleEventSelection = (selectedEvent: IEvent) => {
+    console.log(`Selected event: ${selectedEvent.title}`);
   };
 
-  const eventStyleGetter = () => {
+  const customizeEventStyle = () => {
     return {
       style: {
         backgroundColor: 'lightblue',
@@ -69,16 +69,16 @@ const EventDashboard: React.FC = () => {
   return (
     <div>
       <Calendar
-        localizer={localizer}
-        events={events.map(event => ({...event, start: new Date(event.start), end: new Date(event.end)}))}
+        localizer={calendarLocalizer}
+        events={allEvents.map(event => ({...event, start: new Date(event.start), end: new Date(event.end)}))}
         startAccessor="start"
         endAccessor="end"
         style={{ height: 500 }}
-        onSelectEvent={handleSelectEvent}
-        eventPropGetter={eventStyleGetter}
+        onSelectEvent={handleEventSelection}
+        eventPropGetter={customizeEventStyle}
       />
     </div>
   );
 };
 
-export default EventDashboard;
+export default EventCalendarDashboard;
