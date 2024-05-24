@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -66,11 +66,18 @@ const EventCalendarDashboard: React.FC = () => {
     };
   };
 
+  // Memoize processed events to avoid unnecessary recalculations on each render
+  const processedEvents = useMemo(() => allEvents.map(event => ({
+    ...event, 
+    start: new Date(event.start), 
+    end: new Date(event.end)
+  })), [allEvents]);
+
   return (
     <div>
       <Calendar
         localizer={calendarLocalizer}
-        events={allEvents.map(event => ({...event, start: new Date(event.start), end: new Date(event.end)}))}
+        events={processedEvents}
         startAccessor="start"
         endAccessor="end"
         style={{ height: 500 }}
