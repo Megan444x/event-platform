@@ -68,10 +68,17 @@ const useEventManagement = (eventId: string) => {
   }, [eventId, fetchEventDetails]);
 
   useEffect(() => {
-    fetchEventStartPosition();
+    fetchEventDetails();
   }, [fetchEventDetails]);
 
-  return { eventDetails, loading, error, updateSessionTimes, manageAttendeeList };
+  // New Functionality: Filter sessions by start time
+  const filterSessionsByTime = useCallback((startTime: string) => {
+    if (!eventDetails) return [];
+
+    return eventDetails.sessions.filter(session => session.startTime === startTime);
+  }, [eventDetails]);
+
+  return { eventDetails, loading, error, updateSessionTimes, manageAttendeeList, filterSessionsByTime };
 };
 
 export default useEventManagement;
