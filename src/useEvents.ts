@@ -27,13 +27,23 @@ const useEventManagement = (eventId: string) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const processError = (err: any) => {
+    if (axios.isAxiosError(err)) {
+      setError(err.response?.data?.message || 'Something went wrong with the request.');
+    } else if (err instanceof Error) {
+      setError(err.message);
+    } else {
+      setError('An unexpected error occurred.');
+    }
+  };
+  
   const fetchEventDetails = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/events/${eventId}`);
       setEventDetails(response.data);
     } catch (err) {
-      setError('Failed to fetch event details');
+      processError(err);
     } finally {
       setLoading(false);
     }
@@ -45,7 +55,7 @@ const useEventManagement = (eventId: string) => {
       await axios.put(`${API_URL}/sessions/${sessionId}`, { startTime, endTime });
       fetchEventDetails();
     } catch (err) {
-      setError('Failed to update session times');
+      processError(err);
     } finally {
       setLoading(false);
     }
@@ -61,7 +71,7 @@ const useEventManagement = (eventId: string) => {
       }
       fetchEventDetails();
     } catch (err) {
-      setError(action === 'add' ? 'Failed to add attendee' : 'Failed to remove attendee');
+      processError(err);
     } finally {
       setLoading(false);
     }
@@ -71,7 +81,6 @@ const useEventManagement = (eventId: string) => {
     fetchEventDetails();
   }, [fetchEventDetails]);
 
-  // New Functionality: Filter sessions by start time
   const filterSessionsByTime = useCallback((startTime: string) => {
     if (!eventDetails) return [];
 
