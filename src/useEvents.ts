@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -36,7 +36,7 @@ const useEventManagement = (eventId: string) => {
       setError('An unexpected error occurred.');
     }
   };
-  
+
   const fetchEventDetails = useCallback(async () => {
     setLoading(true);
     try {
@@ -48,6 +48,9 @@ const useEventManagement = (eventId: string) => {
       setLoading(false);
     }
   }, [eventId]);
+
+  // Memoize eventDetails to prevent unnecessary recalculations
+  const memoizedEventDetails = useMemo(() => eventDetails, [eventDetails]);
 
   const updateSessionTimes = useCallback(async (sessionId: string, startTime: string, endTime: string) => {
     setLoading(true);
@@ -82,12 +85,18 @@ const useEventManagement = (eventId: string) => {
   }, [fetchEventDetails]);
 
   const filterSessionsByTime = useCallback((startTime: string) => {
-    if (!eventDetails) return [];
+    if (!memoizedEventDetails) return [];
 
-    return eventDetails.sessions.filter(session => session.startTime === startTime);
-  }, [eventDetails]);
+    return memoizedEventDetails.sessions.filter(session => session.startTime === startTime);
+  }, [memoizedEventDetails]);
 
-  return { eventDetails, loading, error, updateSessionTimes, manageAttendeeList, filterSessionsByTime };
+  // New functionality: Search attendees by name
+  const searchAttendeesByName = useCallback((name: string) => {
+    if (!memoizedEventDetails) return [];
+    return memoizedEventDetails.attendees.filter(attendee => attendee.name.toLowerCase().includes(name.toLowerCase()));
+  }, [memoizedEventDetails]);
+
+  return { eventDetails: memoizedEventDetails, loading, error, updateSessionTimes, manageAttendeeList, filterSessionsByTime, searchAttendeesByName };
 };
 
 export default useEventManagement;
