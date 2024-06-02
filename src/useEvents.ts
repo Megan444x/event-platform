@@ -28,13 +28,12 @@ const useEventManagement = (eventId: string) => {
   const [error, setError] = useState<string | null>(null);
 
   const processError = (err: any) => {
-    if (axios.isAxiosError(err)) {
-      setError(err.response?.data?.message || 'Something went wrong with the request.');
-    } else if (err instanceof Error) {
-      setError(err.message);
-    } else {
-      setError('An unexpected error occurred.');
-    }
+    const errorMessage = axios.isAxiosError(err) 
+                          ? err.response?.data?.message || 'Something went wrong with the request.'
+                          : err instanceof Error 
+                          ? err.message
+                          : 'An unexpected error occurred.';
+    setError(errorMessage);
   };
 
   const fetchEventDetails = useCallback(async () => {
@@ -49,7 +48,6 @@ const useEventManagement = (eventId: string) => {
     }
   }, [eventId]);
 
-  // Memoize eventDetails to prevent unnecessary recalculations
   const memoizedEventDetails = useMemo(() => eventDetails, [eventDetails]);
 
   const updateSessionTimes = useCallback(async (sessionId: string, startTime: string, endTime: string) => {
@@ -84,19 +82,23 @@ const useEventManagement = (eventId: string) => {
     fetchEventDetails();
   }, [fetchEventDetails]);
 
-  const filterSessionsByTime = useCallback((startTime: string) => {
-    if (!memoizedEventDetails) return [];
+  const filterSessionsByTime = useCallback((startTime: string) => (
+    memoizedEventDetails?.sessions.filter(session => session.startTime === startTime) || []
+  ), [memoizedEventDetails]);
 
-    return memoizedEventDetails.sessions.filter(session => session.startTime === startTime);
-  }, [memoizedEventDetails]);
+  const searchAttendeesByName = useCallback((name: string) => (
+    memoizedEventDetails?.attendees.filter(attendee => attendee.name.toLowerCase().includes(name.toLowerCase())) || []
+  ), [memoizedEventDetails]);
 
-  // New functionality: Search attendees by name
-  const searchAttendeesByName = useCallback((name: string) => {
-    if (!memoizedEventDetails) return [];
-    return memoizedEventDetails.attendees.filter(attendee => attendee.name.toLowerCase().includes(name.toLowerCase()));
-  }, [memoizedEventDetails]);
-
-  return { eventDetails: memoizedEventDetails, loading, error, updateSessionTimes, manageAttendeeList, filterSessionsByTime, searchAttendeesByName };
+  return { 
+    eventDetails: memoizedEventDetails, 
+    loading, 
+    error, 
+    updateSessionTimes, 
+    manageAttendeeList, 
+    filterSessionsByTime, 
+    searchAttendeesByName 
+  };
 };
 
 export default useEventManagement;
