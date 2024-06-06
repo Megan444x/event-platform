@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::env;
+use std::env; 
 
 #[derive(Clone, Debug)]
 struct Event {
@@ -51,6 +51,10 @@ impl EventManager {
     fn list_events(&self) -> Vec<&Event> {
         self.events.values().collect()
     }
+
+    fn list_attendees_for_event(&self, event_id: u32) -> Option<Vec<String>> {
+        self.events.get(&event_id).map(|event| event.attendees.clone())
+    }
 }
 
 fn main() {
@@ -63,11 +67,21 @@ fn main() {
     event_manager.register_to_event(1, "Bob");
 
     match event_manager.get_event(1) {
-        Some(event) => println!("Event found: {:?}", event),
+        Some(event) => println!("Event found before delete: {:?}", event),
         None => println!("Event not found"),
     };
 
     event_manager.update_event(1, "RustConf 2023");
 
+    match event_manager.list_attendees_for_event(1) {
+        Some(attendees) => println!("Attendees: {:?}", attendees),
+        None => println!("No attendees or event not found"),
+    }
+
     event_manager.delete_event(1);
+    
+    match event_manager.get_event(1) {
+        Some(_) => println!("Error: Event was not properly deleted."),
+        None => println!("Event successfully deleted."),
+    };
 }
