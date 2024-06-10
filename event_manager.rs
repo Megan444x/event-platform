@@ -1,5 +1,22 @@
 use std::collections::{HashMap, HashSet};
-use std::env;
+use std::fmt;
+
+#[derive(Debug, Clone)]
+enum EventError {
+    EventNotFound,
+    DuplicateEvent,
+    AttendeeError(String),
+}
+
+impl fmt::Display for EventError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            EventError::EventNotFound => write!(f, "Event not found."),
+            EventError::DuplicateEvent => write!(f, "Event with the same ID already exists."),
+            EventError::AttendeeError(msg) => write!(f, "Error managing attendee: {}", msg),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 struct Event {
@@ -8,8 +25,8 @@ struct Event {
     attendees: Vec<String>,
 }
 
-impl std::fmt::Display for Event {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Event ID: {}, Name: {}, Attendees: {:?}", self.id, self.name, self.attendees)
     }
 }
@@ -27,7 +44,10 @@ impl EventManager {
         }
     }
 
-    fn create_event(&mut self, id: u32, name: &str) {
+    fn create_event(&mut self, id: u32, name: &str) -> Result<(), EventError> {
+        if self.events.contains_key(&id) {
+            return Err(EventError::DuplicateEvent);
+        }
         let new_event = Event {
             id,
             name: name.to_string(),
@@ -35,29 +55,46 @@ impl EventManager {
         };
         self.name_to_id.entry(name.to_string()).or_insert_with(HashSet::new).insert(id);
         self.events.insert(id, new_event);
+        Ok(())
     }
 
-    fn get_event(&self, id: u32) -> Option<&Event> {
-        self.events.get(&id)
+    fn get_event(&self, id: u32) -> Result<&Event, EventError> {
+        self.events.get(&id).ok_or(EventError::EventNotFound)
     }
 
-    fn update_event(&mut self, id: u32, new_name: &str) {
-        if let Some(event) = self.events.get_mut(&id) {
-            let old_name = std::mem::replace(&mut event.name, new_name.to_string());
-            self.name_to_id.entry(old_name).and_modify(|e| { e.remove(&id); });
-            self.name_to_id.entry(new_name.to_string()).or_insert_with(HashSet::new).insert(id);
+    fn update_event(&mut self, id: u32, new_name: &str) -> Result<(), EventError> {
+        match self.events.get_mut(&id) {
+            Some(event) => {
+                let old_name = std::mem::replace(&mut event.name, new_name.to_string());
+                self.name_to_id.entry(old_name).and_modify(|e| { e.remove(&id); });
+                self.name_to_id.entry(new_name.to_string()).or_insert_with(HashSet::new).insert(id);
+                Ok(())
+            },
+            None => Err(EventError::EventNotFound),
         }
     }
 
-    fn delete_event(&mut self, id: u32) {
-        if let Some(event) = self.events.remove(&id) {
-            self.name_to_id.entry(event.name).and_modify(|e| { e.remove(&id); });
+    fn delete_event(&mut self, id: u32) -> Result<(), EventError> {
+        match self.events.remove(&id) {
+            Some(event) => {
+                self.name_to_id.entry(event.name).and_modify(|e| { e.remove(&id); });
+                Ok(())
+            },
+            None => Err(EventError::EventNotFound),
         }
     }
 
-    fn register_to_event(&mut self, event_id: u32, attendee: &str) {
-        if let Some(event) = self.events.get_mut(&event_id) {
-            event.attendees.push(attendee.to_string());
+    fn register_to_event(&mut self, event_id: u32, attendee: &str) -> Result<(), EventError> {
+        match self.events.get_mut(&event_id) {
+            Some(event) => {
+                if !event.attendes.contains(&attendee.to_string()) {
+                    event.attendees.push(attendee.to_string());
+                    Ok(())
+                } else {
+                    Err(EventError::AttendeeError("Attendee already registered.".to_owned()))
+                }
+            },
+            None => Err(EventError::EventNotFound),
         }
     }
 
@@ -65,8 +102,8 @@ impl EventManager {
         self.events.values().collect()
     }
 
-    fn list_attendees_for_event(&self, event_id: u32) -> Option<Vec<String>> {
-        self.events.get(&event_id).map(|event| event.attendees.clone())
+    fn list_attendees_for_event(&self, event_id: u32) -> Result<Vec<String>, EventError> {
+        self.events.get(&event_id).map(|event| event.attendees.clone()).ok_or(EventError::EventNotFound)
     }
 
     fn find_events_by_name(&self, name: &str) -> Vec<&Event> {
@@ -77,39 +114,16 @@ impl EventManager {
 }
 
 fn main() {
-    dotenv::dotenv().ok();
-
     let mut event_manager = EventManager::new();
-    event_manager.create_event(1, "Rust Conference");
-    event_manager.create_event(2, "Rust Conference");
 
-    event_manager.register_to_event(1, "Alice");
-    event_manager.register_to_event(1, "Bob");
-
-    match event_manager.get_event(1) {
-        Some(event) => println!("Event found before delete: {}", event),
-        None => println!("Event not found"),
-    };
-
-    event_manager.update_event(1, "RustConf 2023");
-
-    for event in event_manager.find_events_by_name("Rust Conference") {
-        println!("Found event by name: {}", event);
+    // Handle creation errors
+    if let Err(e) = event_manager.create_event(1, "Rust Conference") {
+        println!("Error creating event: {}", e);
     }
 
-    for event in event_manager.find_events_by_name("RustConf 2023") {
-        println!("Found updated event by name: {}", event);
+    // Similarly, handle other operations with potential for errors
+    match event_num {
+        Some(event) => println!("Event found: {}", event),
+        None => println!("Event not found."),
     }
-
-    match event_manager.list_attendees_for_event(1) {
-        Some(attendees) => println!("Attendees: {:?}", attendees),
-        None => println!("No attendees or event not found"),
-    }
-
-    event_manager.delete_event(1);
-    
-    match event_manager.get_event(1) {
-        Some(_) => println!("Error: Event was not properly deleted."),
-        None => println!("Event successfully deleted."),
-    };
 }
