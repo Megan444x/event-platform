@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
+use std::fmt;
 
 mod event_management {
     use super::*;
-    
+
     #[derive(Clone, Debug, PartialEq)]
     pub struct Event {
         pub id: u32,
@@ -12,37 +13,54 @@ mod event_management {
         pub participants: Vec<String>,
     }
 
+    #[derive(Debug)]
+    pub enum EventError {
+        EventAlreadyExists,
+        EventNotFound,
+        InternalError,
+    }
+
+    impl fmt::Display for EventError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match *self {
+                EventError::EventAlreadyExists => write!(f, "Event ID already exists"),
+                EventError::EventNotFound => write!(f, "Event not found"),
+                EventError::InternalError => write!(f, "An internal error occurred"),
+            }
+        }
+    }
+
     lazy_static! {
         pub static ref EVENTS_DB: Mutex<HashMap<u32, Event>> = Mutex::new(HashMap::new());
     }
-    
-    pub fn create_event(id: u32, name: &str) -> Result<(), String> {
-        let mut db = EVENTS_DB.lock().unwrap();
+
+    pub fn create_event(id: u32, name: &str) -> Result<(), EventError> {
+        let mut db = EVENTS_DB.lock().map_err(|_| EventError::InternalError)?;
         if db.contains_key(&id) {
-            Err("Event ID already exists".to_string())
+            Err(EventError::EventAlreadyExists)
         } else {
             db.insert(id, Event { id, name: name.to_string(), participants: vec![] });
             Ok(())
         }
     }
 
-    pub fn register_participant(event_id: u32, participant_name: &str) -> Result<(), String> {
-        let mut db = EVENTS_DB.lock().unwrap();
+    pub fn register_participant(event_id: u32, participant_name: &str) -> Result<(), EventError> {
+        let mut db = EVENTS_DB.lock().map_err(|_| EventError::InternalError)?;
         if let Some(event) = db.get_mut(&event_id) {
             event.participants.push(participant_name.to_string());
             Ok(())
         } else {
-            Err("Event not found".to_string())
+            Err(EventError::EventNotFound)
         }
     }
-    
-    pub fn update_event_name(event_id: u32, new_name: &str) -> Result<(), String> {
-        let mut db = EVENTS_DB.lock().unwrap();
+
+    pub fn update_event_name(event_id: u32, new_name: &str) -> Result<(), EventError> {
+        let mut db = EVENTS_DB.lock().map_err(|_| EventError::InternalRelay)?;
         if let Some(event) = db.get_mut(&event_id) {
             event.name = new_name.to_string();
             Ok(())
         } else {
-            Err("Event not found".to_string())
+            Err(EventError::EventNotFound)
         }
     }
 }
@@ -50,6 +68,7 @@ mod event_management {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use event_management::EventError;
 
     #[test]
     fn test_event_creation() {
@@ -63,7 +82,7 @@ mod tests {
         let result = event_management::register_participant(2, "Alice");
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_event_update() {
         event_management::create_event(3, "Art Show").unwrap();
