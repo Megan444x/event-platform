@@ -2,50 +2,50 @@ import React from 'react';
 import { render, fireEvent, waitFor, screen } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import { rest } from 'msw';
-import { setupMockServer } from 'msw/node';
-import EventComponent from './EventComponent';
+import { setupServer as setupMockServer } from 'msw/node';
+import EventDisplayComponent from './EventComponent';
 
-const mockServer = setupMockServer(
-  rest.get(process.env.REACT_APP_API_ENDPOINT, (req, res, ctx) => {
-    return res(ctx.json({ responseData: 'mocked data' }));
+const eventApiMockServer = setupMockServer(
+  rest.get(process.env.REACT_APP_API_URL, (req, res, ctx) => {
+    return res(ctx.json({ eventData: 'mocked event data' }));
   })
 );
 
-beforeAll(() => mockServer.listen());
-afterEach(() => mockServer.resetHandlers());
-afterAll(() => mockServer.close());
+beforeAll(() => eventApiMockServer.listen());
+afterEach(() => eventApiMockServer.resetHandlers());
+afterAll(() => eventApiMockServer.close());
 
-describe('EventComponent Tests', () => {
-  it('renders as expected', async () => {
-    render(<EventComponent />);
+describe('EventDisplayComponent Tests', () => {
+  it('renders the component as expected', async () => {
+    render(<EventDisplayComponent />);
     expect(screen.getByTestId('event-component-root')).toBeInTheDocument();
   });
 
-  it('updates display in response to user input', async () => {
-    render(<EventComponent />);
-    fireEvent.change(screen.getByTestId('user-input-field'), { target: { value: 'new input' } });
-    fireEvent.click(screen.getByTestId('data-update-button'));
+  it('dynamically updates display based on user input', async () => {
+    render(<EventDisplayComponent />);
+    fireEvent.change(screen.getByTestId('user-input-field'), { target: { value: 'user typed input' } });
+    fireEvent.click(screen.getByTestId('update-data-button'));
     await waitFor(() => {
-      expect(screen.getByTestId('live-data-display')).toHaveTextContent('Updated data based on new input');
+      expect(screen.getByTestId('dynamic-data-display')).toHaveTextContent('Updated data based on typed input');
     });
   });
 
-  it('correctly fetches and shows data', async () => {
-    render(<EventComponent />);
+  it('fetches and displays event data correctly', async () => {
+    render(<EventDisplayComponent />);
     await waitFor(() => {
-      expect(screen.getByTestId('fetched-data-display')).toHaveTextContent('mocked data');
+      expect(screen.getByTestId('fetched-data-display')).toHaveTextContent('mocked event data');
     });
   });
 
-  it('accurately reacts to user actions', async () => {
-    render(<EventComponent />);
-    fireEvent.click(screen.getByTestId('primary-action-button'));
+  it('responds accurately to user interactions', async () => {
+    render(<EventDisplayComponent />);
+    fireEvent.click(screen.getByTestId('main-action-button'));
     await waitFor(() => {
-      expect(screen.getByTestId('primary-action-response')).toHaveTextContent('Expected response to the action');
+      expect(screen.getByTestId('action-outcome-display')).toHaveTextContent('Expected main action outcome');
     });
-    fireEvent.mouseOver(screen.getByTestId('secondary-action-trigger'));
+    fireEvent.mouseOver(screen.getByTestId('alternative-action-trigger'));
     await waitFor(() => {
-      expect(screen.getByTestId('secondary-action-response')).toHaveTextContent('Expected response to the other action');
+      expect(screen.getByTestId('alternative-action-outcome')).toHaveTextContent('Expected alternative action outcome');
     });
   });
 });
